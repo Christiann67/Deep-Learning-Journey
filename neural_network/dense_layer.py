@@ -1,46 +1,45 @@
-def relu(z: float) -> float:
-  """Fungsi Aktivasi ReLu: max(0, z)"""
-  return max(0.0, z)
+from typing import List, Union
+
+Vector = List[Union[int, float]]
+Matrix = List[Vector]
 
 
-def dense_layer(
-  X: list[float], W_matrix: list[list[float]]. B: list[float]
-) -> list[float]:
-  """Menghitung output 1 layer penuh (Dense/Fully Connected Layer) berbasis Pure Python.
-  - X         : Vektor input [Panjang input]
-  - W_matrix  : Matriks bobot [jumlah neuron x panjang input]
-  - B         : Vektor bias [jumlah neuron]
+def relu(z: Union[int, float]) -> Union[int, float]:
+  """Rectified Linear Unit Activation: f(z) = max(0, z)"""
+  return max(0, z)
+
+
+def pure_matmul(matrix_a: Matrix, matrix_b: Matrix) -> Matrix:
+  """Perkalian dua matriks 2D tanpa library eksternal.
+
+  Kompleksitas Waktu: O(M * K * N) -> O(N^3) untuk matriks persegi.
+  Kompleksitas Memori: O(M * N)
   """
-  output_layer = []
+  rows_a, cols_a = len(matrix_a), len(matrix_a[0])
+  rows_b, cols_b = len(matrix_b), len(matrix_b[0])
 
-  # Iterasi setiap neuron (setiap baris bobot W dan bias b) menggunakan zip()
-  for W_neuron, b in zip(W_matrix, B):
-    # 1. Hitung Dot Product untuk neuron ini
-    dot_product = sum(x * w for x, w in zip(X, W_neuron))
+  if cols_a != rows_b:
+    raise ValueError(
+        f"Dimensi tidak valid untuk perkalian: {cols_a} != {rows_b}"
+    )
 
-    # 2. Tambahkan Bias (b)
-    z = dot_product + b
+  transposed_b = list(zip(*matrix_b))
 
-    # 3. Saring dengan ReLU lalu simpan hasilnya
-    output_layer.append(relu(z))
+  result: Matrix = []
+  for row in matrix_a:
+    new_row: Vector = []
+    for col in transposed_b:
+      mac_sum = sum(x * y for x, y in zip(row, col))
+      new_row.append(mac_sum)
+    result.append(new_row)
 
-  return output_layer
+  return result
 
 
-# --- Uji Coba Sesuai Hitungan Kita Kemarin ---
-if __name__ == "__main__":
-  input_data = [5.0, 2.0, 1.0, 4.0]
+def dense_forward(x: Vector, weights: Matrix, biases: Vector) -> Vector:
+  """Forward pass 1 layer: ReLU(X * W + b)"""
+  matrix_x: Matrix = [x]
+  z_matrix = pure_matmul(matrix_x, weights)
+  z_vector = z_matrix[0]
 
-  # Matriks bobot 3 neuron
-  matriks_bobot = [
-      [1.0, 0.0, -1.0, 2.0],  # Bobot Neuron 1
-      [0.0, 2.0, 1.0, -1.0],  # Bobot Neuron 2
-      [-1.0, 1.0, 0.0, 1.0],  # Bobot Neuron 3
-  ]
-
-  # Bias 3 neuron
-  vektor_bias = [-3.0, 1.0, -2.0]
-
-  hasil = dense_layer(input_data, matriks_bobot, vektor_bias)
-  print(f"Output Layer: {hasil}")
-  # Ekspektasi Output: [9.0, 2.0, 0.0]
+  return [relu(z + b) for z, b in zip(z_vector, biases)]
